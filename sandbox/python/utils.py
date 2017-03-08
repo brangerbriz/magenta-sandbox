@@ -163,7 +163,6 @@ def extract_features(midi_path):
         features.jSymbolic.ImportanceOfBassRegisterFeature,
         features.jSymbolic.ImportanceOfMiddleRegisterFeature,
         features.jSymbolic.ImportanceOfHighRegisterFeature,
-        features.jSymbolic.MelodicIntervalHistogramFeature,
         features.jSymbolic.BasicPitchHistogramFeature,
         features.jSymbolic.PitchClassDistributionFeature,
         features.jSymbolic.QualityFeature, # mode
@@ -186,4 +185,4 @@ def extract_features(midi_path):
     ds.addData(s)
     ds.addFeatureExtractors(feats)
     ds.process()
-    return (ds.getFeaturesAsList(), ds.getAttributeLabels())
+    return [ds.getFeaturesAsList()[0], ds.getAttributeLabels()]
