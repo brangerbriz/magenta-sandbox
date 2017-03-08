@@ -1,8 +1,35 @@
 import dill as pickle
 import numpy as np
-import time, numbers, os, pdb
+import time, numbers, os, pdb, json, operator
 import shutil
 from music21 import *
+
+with open(os.path.expanduser('~') + '/Documents/code/midi-dataset/data/match_scores.json', 'r') as f:
+    MATCH_SCORES = json.load(f)
+
+def get_midi_to_track_lut():
+    mid_to_track = {}
+    for k, vals in MATCH_SCORES.items():
+        for v in vals:
+            if not v in mid_to_track:
+                mid_to_track[v] = {
+                    'track': k,
+                    'confidence': MATCH_SCORES[k][v]
+                }
+            # if the new confidence score is higher than the last
+            # update the track it points to
+            elif MATCH_SCORES[k][v] > mid_to_track[v]['confidence']:
+                mid_to_track[v]['track'] = k
+    return mid_to_track
+
+# returns the average midi track msd alignment 
+# confidence score of all files in lakh midi dataset
+def get_avg_msd_midi_alignment_conf():
+	mid_to_track = get_midi_to_track_lut()
+	s = 0
+	for k, v in mid_to_track.items():
+		s += mid_to_track[k]['confidence']
+	return s / len(list(mid_to_track.keys()))
 
 def query_dict_array(arr, query):
     
@@ -78,14 +105,16 @@ def create_symlink_dir(paths, dirname, file_limit_per_track=None):
         
     dupes = 0
     for path in paths:
-        if os.path.exists(path):
-            for i, filename in enumerate(os.listdir(path)):
-                if file_limit_per_track != None and i == file_limit_per_track:
-                    break
-                if os.path.exists(os.path.join(dirname, filename)):
-                    dupes = dupes + 1
-                    continue
-                os.symlink(os.path.join(path, filename), os.path.join(dirname, filename))
+        basename = os.path.basename(path)
+        # http://stackoverflow.com/questions/268272/getting-key-with-maximum-value-in-dictionary
+        midi = max(MATCH_SCORES[basename].iteritems(), key=operator.itemgetter(1))[0]
+        filename = os.path.join(path, midi + '.mid')
+        if os.path.exists(filename):
+            symlink = os.path.join(dirname, midi + '.mid')
+            if os.path.exists(symlink):
+                dupes = dupes + 1
+                continue
+            os.symlink(filename, symlink)
     print('found {} duplicate midi files'.format(dupes))
 
 # extract features from a midi file using music21 + jSymbolic
