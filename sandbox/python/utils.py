@@ -1,6 +1,6 @@
 import dill as pickle
 import numpy as np
-import time, numbers, os, pdb, json, operator
+import time, numbers, os, pdb, json, operator, math
 import shutil
 from music21 import *
 
@@ -186,3 +186,33 @@ def extract_features(midi_path):
     ds.addFeatureExtractors(feats)
     ds.process()
     return [ds.getFeaturesAsList()[0], ds.getAttributeLabels()]
+
+# removes (in-place) features that have non-zero values less
+# than percent_threshold
+def remove_weak_features(extracted_features, min_percent_of_tracks_with_feature=0.05):
+    feat_labels = { k: 0 for k in extracted_features[0][1] }
+    for track in extracted_features:
+        if track is not None:
+            assert(len(track[1]) == len(track[0]))
+            # for each feature label in the track
+            for i, label in enumerate(track[1]):
+                # if the corresponding feature value is not zero
+                if track[0][i] != 0:
+                    # increment its count in our dict
+                    feat_labels[label] = feat_labels[label] + 1
+    sorted_x = sorted(feat_labels.items(), key=operator.itemgetter(1), reverse=True)
+    # keep only the features that at least 10%
+    # of all tracks have a non-zero value for
+    min_percent_of_tracks_with_feature = 0.05
+    min_count = math.ceil(len(extracted_features) * min_percent_of_tracks_with_feature)
+    feats_to_remove = [k for k, v in feat_labels.iteritems() if v < min_count]
+    indicies_to_remove = [extracted_features[0][1].index(x) for x in feats_to_remove]
+    print('Removed {}/{} features, or {:.2f}%. New feature size is {}.'
+              .format(len(indicies_to_remove), 
+                      len(feat_labels.keys()), 
+                      float(len(indicies_to_remove))/float(len(feat_labels.keys())),
+                      len(feat_labels.keys()) - len(indicies_to_remove)))
+    for track in extracted_features:
+        if track is not None:
+            track[1] = [i for j, i in enumerate(track[1]) if j not in indicies_to_remove]
+            track[0] = [i for j, i in enumerate(track[0]) if j not in indicies_to_remove]
