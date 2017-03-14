@@ -127,59 +127,105 @@ def extract_features(midi_path):
     
     # for a description of features, see section 5 of the jSymbolic paper
     # http://jmir.sourceforge.net/publications/MA_Thesis_2004_Bodhidharma.pdf
+#     feats = [
+#         # instrument features-----------------------------------
+# #         features.jSymbolic.PitchedInstrumentsPresentFeature,
+# #         features.jSymbolic.NotePrevalenceOfPitchedInstrumentsFeature,
+#         features.jSymbolic.NumberOfPitchedInstrumentsFeature,
+#         features.jSymbolic.StringKeyboardFractionFeature,
+#         features.jSymbolic.AcousticGuitarFractionFeature,
+#         features.jSymbolic.ElectricGuitarFractionFeature,
+#         features.jSymbolic.ViolinFractionFeature,
+#         features.jSymbolic.SaxophoneFractionFeature,
+#         features.jSymbolic.BrassFractionFeature,
+#         features.jSymbolic.WoodwindsFractionFeature,
+#         features.jSymbolic.OrchestralStringsFractionFeature,
+#         features.jSymbolic.StringEnsembleFractionFeature,
+#         features.jSymbolic.ElectricInstrumentFractionFeature,
+#         # rythm features----------------------------------------
+#         features.jSymbolic.InitialTempoFeature,
+#         features.jSymbolic.InitialTimeSignatureFeature,
+#         features.jSymbolic.NoteDensityFeature,
+#         features.jSymbolic.AverageNoteDurationFeature,
+#         features.jSymbolic.AverageTimeBetweenAttacksFeature,
+#         features.jSymbolic.VariabilityOfTimeBetweenAttacksFeature,
+#         features.jSymbolic.AverageTimeBetweenAttacksForEachVoiceFeature,
+#         features.jSymbolic.AverageVariabilityOfTimeBetweenAttacksForEachVoiceFeature,
+#         features.jSymbolic.ChangesOfMeterFeature,
+#         features.jSymbolic.MaximumNoteDurationFeature,
+#         features.jSymbolic.MinimumNoteDurationFeature,
+#         # pitch statistics features-----------------------------
+#         features.jSymbolic.MostCommonPitchPrevalenceFeature,
+#         features.jSymbolic.MostCommonPitchClassPrevalenceFeature,
+#         features.jSymbolic.PitchVarietyFeature,
+#         features.jSymbolic.PitchClassVarietyFeature,
+#         features.jSymbolic.RangeFeature,
+#         features.jSymbolic.ImportanceOfBassRegisterFeature,
+#         features.jSymbolic.ImportanceOfMiddleRegisterFeature,
+#         features.jSymbolic.ImportanceOfHighRegisterFeature,
+#         features.jSymbolic.BasicPitchHistogramFeature,
+#         features.jSymbolic.PitchClassDistributionFeature,
+#         features.jSymbolic.QualityFeature, # mode
+# #         features.jSymbolic.GlissandoPrevalenceFeature,
+# #         features.jSymbolic.VibratoPrevalenceFeature,
+#         # melody features---------------------------------------
+#         features.jSymbolic.MelodicIntervalHistogramFeature,
+#         features.jSymbolic.AmountOfArpeggiationFeature,
+#         features.jSymbolic.RepeatedNotesFeature,
+#         features.jSymbolic.ChromaticMotionFeature,
+#         features.jSymbolic.StepwiseMotionFeature,
+#         features.jSymbolic.MelodicThirdsFeature,
+#         features.jSymbolic.MelodicFifthsFeature,
+#         features.jSymbolic.MelodicTritonesFeature,
+#         features.jSymbolic.MelodicOctavesFeature,
+#         features.jSymbolic.DirectionOfMotionFeature
+#     ]
+
     feats = [
-        # instrument features-----------------------------------
-#         features.jSymbolic.PitchedInstrumentsPresentFeature,
-#         features.jSymbolic.NotePrevalenceOfPitchedInstrumentsFeature,
-        features.jSymbolic.NumberOfPitchedInstrumentsFeature,
-        features.jSymbolic.StringKeyboardFractionFeature,
-        features.jSymbolic.AcousticGuitarFractionFeature,
-        features.jSymbolic.ElectricGuitarFractionFeature,
-        features.jSymbolic.ViolinFractionFeature,
-        features.jSymbolic.SaxophoneFractionFeature,
-        features.jSymbolic.BrassFractionFeature,
-        features.jSymbolic.WoodwindsFractionFeature,
-        features.jSymbolic.OrchestralStringsFractionFeature,
-        features.jSymbolic.StringEnsembleFractionFeature,
-        features.jSymbolic.ElectricInstrumentFractionFeature,
-        # rythm features----------------------------------------
-        features.jSymbolic.InitialTempoFeature,
-        features.jSymbolic.InitialTimeSignatureFeature,
-        features.jSymbolic.NoteDensityFeature,
-        features.jSymbolic.AverageNoteDurationFeature,
-        features.jSymbolic.AverageTimeBetweenAttacksFeature,
-        features.jSymbolic.VariabilityOfTimeBetweenAttacksFeature,
-        features.jSymbolic.AverageTimeBetweenAttacksForEachVoiceFeature,
-        features.jSymbolic.AverageVariabilityOfTimeBetweenAttacksForEachVoiceFeature,
-        features.jSymbolic.ChangesOfMeterFeature,
-        features.jSymbolic.MaximumNoteDurationFeature,
-        features.jSymbolic.MinimumNoteDurationFeature,
-        # pitch statistics features-----------------------------
+        features.jSymbolic.MelodicIntervalHistogramFeature,
+        features.jSymbolic.MostCommonMelodicIntervalPrevalenceFeature,
+        features.jSymbolic.AmountOfArpeggiationFeature,
+        features.jSymbolic.RepeatedNotesFeature,
+        features.jSymbolic.ChromaticMotionFeature,
+        features.jSymbolic.MelodicThirdsFeature,
+        features.jSymbolic.MelodicFifthsFeature,
+        features.jSymbolic.MelodicTritonesFeature,
+        features.jSymbolic.MelodicOctavesFeature,
+        features.jSymbolic.DirectionOfMotionFeature,
+        features.jSymbolic.DurationOfMelodicArcsFeature,
+        features.jSymbolic.SizeOfMelodicArcsFeature,
+
+        # pitch features, likely will not use
+        features.jSymbolic.BasicPitchHistogramFeature,
         features.jSymbolic.MostCommonPitchPrevalenceFeature,
         features.jSymbolic.MostCommonPitchClassPrevalenceFeature,
         features.jSymbolic.PitchVarietyFeature,
         features.jSymbolic.PitchClassVarietyFeature,
         features.jSymbolic.RangeFeature,
+        features.jSymbolic.PrimaryRegisterFeature,
         features.jSymbolic.ImportanceOfBassRegisterFeature,
         features.jSymbolic.ImportanceOfMiddleRegisterFeature,
         features.jSymbolic.ImportanceOfHighRegisterFeature,
-        features.jSymbolic.BasicPitchHistogramFeature,
-        features.jSymbolic.PitchClassDistributionFeature,
-        features.jSymbolic.QualityFeature, # mode
-#         features.jSymbolic.GlissandoPrevalenceFeature,
-#         features.jSymbolic.VibratoPrevalenceFeature,
-        # melody features---------------------------------------
-        features.jSymbolic.MelodicIntervalHistogramFeature,
-        features.jSymbolic.AmountOfArpeggiationFeature,
-        features.jSymbolic.RepeatedNotesFeature,
-        features.jSymbolic.ChromaticMotionFeature,
-        features.jSymbolic.StepwiseMotionFeature,
-        features.jSymbolic.MelodicThirdsFeature,
-        features.jSymbolic.MelodicFifthsFeature,
-        features.jSymbolic.MelodicTritonesFeature,
-        features.jSymbolic.MelodicOctavesFeature,
-        features.jSymbolic.DirectionOfMotionFeature
+
+        # pitch feature that seems useful
+        features.jSymbolic.FifthsPitchHistogramFeature,
+
+        features.jSymbolic.NoteDensityFeature,
+        features.jSymbolic.AverageNoteDurationFeature,
+        features.jSymbolic.StaccatoIncidenceFeature,
+        features.jSymbolic.AverageTimeBetweenAttacksFeature,
+        features.jSymbolic.VariabilityOfTimeBetweenAttacksFeature,
+        features.jSymbolic.AverageTimeBetweenAttacksForEachVoiceFeature,
+        features.jSymbolic.AverageVariabilityOfTimeBetweenAttacksForEachVoiceFeature,
+        features.jSymbolic.InitialTempoFeature,
+
+        #native features
+        features.native.MostCommonNoteQuarterLength,
+        features.native.MostCommonNoteQuarterLengthPrevalence,
+        features.native.RangeOfNoteQuarterLengths
     ]
+
+
     
     ds = features.DataSet(classLabel=midi_path)
     ds.addData(s)
