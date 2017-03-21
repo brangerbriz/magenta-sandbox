@@ -262,3 +262,12 @@ def remove_weak_features(extracted_features, min_percent_of_tracks_with_feature=
         if track is not None:
             track[1] = [i for j, i in enumerate(track[1]) if j not in indicies_to_remove]
             track[0] = [i for j, i in enumerate(track[0]) if j not in indicies_to_remove]
+
+def histogram(X):
+    hist = {}
+    for x in X:
+        val = np.argmax(x)
+        if not val in hist:
+            hist[val] = 0
+        hist[val] = hist[val] + 1
+    return hist
