@@ -70,12 +70,12 @@ def program_to_family(pgrm_num):
 # This approach encodes note pitches only and does not contain timing 
 # information or rests.
 # expects pm_instrument to be monophonic.
-def encode_sliding_window_notes(pm_instrument, window_size=20):
+def encode_sliding_window_notes(pm_instrument, window_size=20, num_classes=128):
     notes = [n.pitch for n in pm_instrument.notes]
     windows = []
     for i in range(0, len(notes) - window_size - 1):
-        window = ([to_categorical(n, num_classes=128).flatten() for n in notes[i:i + window_size]], 
-                        to_categorical(notes[i + window_size + 1], num_classes=128).flatten())
+        window = ([to_categorical(n, num_classes=num_classes).flatten() for n in notes[i:i + window_size]], 
+                        to_categorical(notes[i + window_size + 1], num_classes=num_classes).flatten())
         windows.append(window)
     return windows
 
