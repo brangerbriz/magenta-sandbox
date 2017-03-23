@@ -66,54 +66,9 @@ def program_to_family(pgrm_num):
     else: # program number out of range
         return None
 
-# one-hot encode a sliding window of notes from a pretty midi instrument.
-# This approach encodes note pitches only and does not contain timing 
-# information or rests.
-# expects pm_instrument to be monophonic.
-def encode_sliding_window_notes(pm_instrument, window_size=20, num_classes=128):
-    notes = [n.pitch for n in pm_instrument.notes]
-    windows = []
-    for i in range(0, len(notes) - window_size - 1):
-        window = ([to_categorical(n, num_classes=num_classes).flatten() for n in notes[i:i + window_size]], 
-                        to_categorical(notes[i + window_size + 1], num_classes=num_classes).flatten())
-        windows.append(window)
-    return windows
-
-# one-hot encode a sliding window of notes from a pretty midi instrument.
-# This approach uses the piano roll method, where each step in the sliding
-# window represents a constant unit of time (fs=4, or 1 sec / 4 = 250ms).
-# This allows us to encode rests.
-# expects pm_instrument to be monophonic.
-def encode_sliding_windows(pm_instrument, window_size=20):
-    
-    roll = np.copy(pm_instrument.get_piano_roll(fs=4).T)
-
-    # trim beginning silence
-    summed = np.sum(roll, axis=1)
-    mask = (summed > 0).astype(float)
-    roll = roll[np.argmax(mask):]
-    
-    # transform note velocities into 1s
-    roll = (roll > 0).astype(float)
-    
-    # calculate the percentage of the events that are rests
-    s = np.sum(roll, axis=1)
-    num_silence = len(np.where(s == 0)[0])
-    # print('{}/{} {:.2f} events are rests'.format(num_silence, len(roll), float(num_silence)/float(len(roll))))
-
-    # append a feature: 1 to rests and 0 to notes
-    rests = np.sum(roll, axis=1)
-    rests = (rests != 1).astype(float)
-    roll = np.insert(roll, 0, rests, axis=1)
-    
-    windows = []
-    for i in range(0, roll.shape[0] - window_size - 1):
-        windows.append((roll[i:i + window_size], roll[i + window_size + 1]))
-    return windows
-
 # create a pretty midi file with a single instrument using the one-hot encoding
 # output of keras model.predict.
-def decode_sliding_windows(windows, 
+def network_output_to_midi(windows, 
                            instrument_name='Acoustic Grand Piano', 
                            allow_represses=False):
 
