@@ -21,17 +21,15 @@ print('Loaded msd cache in {:.2f} seconds'.format(time.time() - start_time))
 
 # Query dataset ------------------------------------------------------------
 query = {
-    'song_hotttnesss': lambda hotttnesss: hotttnesss > 0.6,
-    'artist_terms': ['electronic'],
-    'song_year': lambda year: year > 1990,
-    'type': 'AND'
+    'song_year': lambda year: year > 1999,
 }
 
 #---------------------------------------------------------------------------
 print('Query dictionary:')
 pprint(query)
 
-results = utils.query_dict_array(msd, query)
+# results = utils.query_dict_array(msd, query)
+results = msd
 
 print('Query returned {} results'.format(len(results)))
 

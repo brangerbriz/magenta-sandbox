@@ -1,11 +1,18 @@
+import pdb
 import midi_utils
 import numpy as np
-import pretty_midi
 from multiprocessing import Pool as ThreadPool
+from keras.utils.np_utils import to_categorical
 
 #format enum
-F_VANILLA_WINDOW = 1
-F_EVENT_WINDOW   = 2
+F_VANILLA_WINDOW       = 1
+F_EVENT_WINDOW_NOTES   = 2
+F_EVENT_WINDOW_TIMES   = 3
+
+# average windows per file (calculated using a window size of 
+# 20 and ~5,000 midi files). Useful in approximating an epoch 
+# size before data is loaded (like w/ generators).
+WINDOWS_PER_FILE = 824 
 
 # loads everything into RAM at once
 def get_data(midi_paths, 
@@ -18,18 +25,19 @@ def get_data(midi_paths,
 def get_data_generator(midi_paths, 
                        form=F_VANILLA_WINDOW, 
                        window_size=20, 
-                       num_threads=8):
+                       num_threads=8,
+                       batch_size=32):
 
     def extract_data(pm_midi, form, window_size):
 
         if form == F_VANILLA_WINDOW or \
-           form == F_EVENT_WINDOW:
+           form == F_EVENT_WINDOW_NOTES or \
+           form == F_EVENT_WINDOW_TIMES:
             return windows_from_monophonic_instruments(pm_midi, form, window_size)
         else:
             raise('Unsupported form parameter')
 
-    batch_size = 32 # this refers to windows
-    load_size = 200 # this refers to files
+    load_size = 400 # this refers to files
 
      # load midi data
     pool = ThreadPool(num_threads)
@@ -45,7 +53,7 @@ def get_data_generator(midi_paths,
         # print('loading large batch: {}'.format(load_size))
         # print('Parsing midi files...')
         # start_time = time.time()
-        parsed = map(midi_utils.parse_midi, load_files)
+        parsed = pool.map(midi_utils.parse_midi, load_files)
         # print('Finished in {:.2f} seconds'.format(time.time() - start_time))
         # print('parsed, now extracting data')
         data = extract_data(parsed, form, window_size)
@@ -70,14 +78,16 @@ def windows_from_monophonic_instruments(midi, form, window_size):
     for m in midi:
         if m is not None:
             melody_instruments = midi_utils.filter_monophonic(m.instruments, 
-                                                              0.95)
+                                                              1.0)
             for instrument in melody_instruments:
                 if len(instrument.notes) > window_size:
                     windows = None
                     if form == F_VANILLA_WINDOW:
-                        windows = _encode_sliding_windows(instrument)
-                    elif form == F_EVENT_WINDOW:
-                        windows = _encode_sliding_window_notes(instrument, window_size=window_size)
+                        windows = _encode_sliding_windows(instrument, window_size)
+                    elif form == F_EVENT_WINDOW_NOTES:
+                        windows = _encode_sliding_window_notes(instrument, window_size)
+                    elif form == F_EVENT_WINDOW_TIMES:
+                        windows = _encode_sliding_window_times(instrument, window_size)
                     for w in windows:
                         X.append(w[0])
                         y.append(w[1])
@@ -87,7 +97,7 @@ def windows_from_monophonic_instruments(midi, form, window_size):
 # This approach encodes note pitches only and does not contain timing 
 # information or rests.
 # expects pm_instrument to be monophonic.
-def _encode_sliding_window_notes(pm_instrument, window_size=20, num_classes=128):
+def _encode_sliding_window_notes(pm_instrument, window_size, num_classes=128):
     notes = [n.pitch for n in pm_instrument.notes]
     windows = []
     for i in range(0, len(notes) - window_size - 1):
@@ -96,12 +106,50 @@ def _encode_sliding_window_notes(pm_instrument, window_size=20, num_classes=128)
         windows.append(window)
     return windows
 
+# COME BACK HERE ON MONDAY
+def _encode_sliding_window_times(pm_instrument, window_size):
+    notes = [(n.start, n.end) for n in pm_instrument.notes]
+    windows = []
+    # windows.append((0.0, 0.0))
+    for i in range(1, len(notes) - window_size - 1):
+        x = notes[i:i + window_size]
+        y = notes[i + window_size + 1]
+        prev_x = notes[i - 1:i + window_size - 1]
+        prev_y = notes[i + window_size]  
+
+        # this fails ocassionally: y[0] < prev_y[0]
+        # and this more so does this: y[0] < prev_y[1]
+        # if y[0] < prev_y[0]:
+        #     print('fuck 1')
+        # if y[0] < prev_y[1]:
+        #     print('fuck 2')
+
+        X = []
+        # create (offset, duration) pairs, where the first element is the offset
+        # of this note from the last note off and the second element is the 
+        # length of this note. Both values expressed in seconds. 
+        for j in range(window_size):
+            # note on minus last note off
+            offset   = x[j][0] - prev_x[j][1]
+            # note off minus this note on
+            duration = x[j][1] - x[j][0]
+            
+            # if offset < 0 or duration < 0:
+            #     pdb.set_trace()
+
+            X.append([offset, duration])    
+
+        # note on minus last note off, note off minus this note on
+        Y = [y[0] - prev_y[1], y[1] - y[0]]
+        windows.append((X, Y))
+    return windows
+
 # one-hot encode a sliding window of notes from a pretty midi instrument.
 # This approach uses the piano roll method, where each step in the sliding
 # window represents a constant unit of time (fs=4, or 1 sec / 4 = 250ms).
 # This allows us to encode rests.
 # expects pm_instrument to be monophonic.
-def _encode_sliding_windows(pm_instrument, window_size=20):
+def _encode_sliding_windows(pm_instrument, window_size):
     
     roll = np.copy(pm_instrument.get_piano_roll(fs=4).T)
 

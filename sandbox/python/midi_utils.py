@@ -7,6 +7,7 @@ def parse_midi(path):
     with open(path, 'r') as f:
         try:
             midi = pretty_midi.PrettyMIDI(f)
+            midi.remove_invalid_notes()
         except:
             pass
     return midi
