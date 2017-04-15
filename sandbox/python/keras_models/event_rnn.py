@@ -88,8 +88,9 @@ def main():
 
     midi_dir = '../../../data/query_symlinks'
 
-    model_num = 1
+    model_num = 3
     model_dir = '../../../models/keras/02_event_rnn/{}'.format(model_num)
+    rythm_test = False
 
     window_size = 20
 
@@ -97,8 +98,8 @@ def main():
     model_utils.create_model_dir(model_dir)
 
     files = [os.path.join(midi_dir, path) for path in os.listdir(midi_dir)]
-    train_files = files[0:100]
-    val_files   = files[100:120]
+    train_files = files[0:1000]
+    val_files   = files[1000:1250]
 
     # get the train/val d 
     train_generator = data_utils.get_data_generator(train_files, 
@@ -115,7 +116,7 @@ def main():
     X_timing_seed, _ = val_generator.next()
     # pdb.set_trace()
 
-    timing_model, epoch = get_timing_model(
+    timing_model, epoch = get_timing_model(model_dir,
                                            window_size=window_size, 
                                            model_index=1)
 
@@ -130,15 +131,15 @@ def main():
                                           checkpoint_monitor='val_mae',
                                           model_index=1)
     
-    print('fitting timing model...')
-    timing_model.fit_generator(train_generator,
-                               steps_per_epoch=data_utils.WINDOWS_PER_FILE * 10, 
-                               epochs=10,
-                               validation_data=val_generator, 
-                               validation_steps=data_utils.WINDOWS_PER_FILE * 2,
-                               verbose=1, 
-                               callbacks=callbacks,
-                               initial_epoch=epoch)
+    # print('fitting timing model...')
+    # timing_model.fit_generator(train_generator,
+    #                            steps_per_epoch=data_utils.WINDOWS_PER_FILE * len(train_files), 
+    #                            epochs=30,
+    #                            validation_data=val_generator, 
+    #                            validation_steps=data_utils.WINDOWS_PER_FILE * len(val_files),
+    #                            verbose=1, 
+    #                            callbacks=callbacks,
+    #                            initial_epoch=epoch)
 
     train_generator = data_utils.get_data_generator(train_files, 
                                                     form=data_utils.F_EVENT_WINDOW_NOTES, 
@@ -177,16 +178,15 @@ def main():
     for i, midi in enumerate(generated_notes):
         for instrument in midi.instruments:
             wall_time = 0
+            if rythm_test:
+                instrument.program = 125 
             for j, note in enumerate(instrument.notes):
-                # print(i, j)
-                # print(note)
+                if rythm_test:
+                    note.pitch = 60
                 offset = generated_timings[i][j][0]
                 duration = generated_timings[i][j][1]
                 note.start = wall_time + offset
                 note.end   = wall_time + offset + duration
-                # print(note)
-                print(generated_timings[i][j])
-                # print('')
                 wall_time = wall_time + offset + duration
 
     for i, midi in enumerate(generated_notes):

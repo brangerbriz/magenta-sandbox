@@ -110,3 +110,72 @@ def network_output_to_midi(windows,
     # Add the cello instrument to the PrettyMIDI object
     midi.instruments.append(instrument)
     return midi
+
+# create a pretty midi file with a single instrument using the one-hot encoding
+# output of keras model.predict.
+def network_output_intervals_to_midi(windows,
+                                     start_note,
+                                     instrument_name='Acoustic Grand Piano', 
+                                     allow_represses=False):
+
+    def from_one_hot(vec, rest_token=1000):
+        index = np.argmax(vec)
+        if index == 0:
+            return rest_token
+        else:
+            # weirdly this has to be mapped from 0-99 if to_one_hot is mapping
+            # from 1-100
+            return map_range((0, 99), (-50, 50), index)
+
+    def map_range(a, b, s):
+        (a1, a2), (b1, b2) = a, b
+        return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
+
+    def clamp(val, min_, max_):
+        return min_ if val < min_ else max_ if val > max_ else val
+
+    # Create a PrettyMIDI object
+    midi = pretty_midi.PrettyMIDI()
+    # Create an Instrument instance for a cello instrument
+    instrument_program = pretty_midi.instrument_name_to_program(instrument_name)
+    instrument = pretty_midi.Instrument(program=instrument_program)
+    
+    cur_note = None # an invalid note to start with
+    cur_note_start = None
+    clock = 0
+
+    last_played_note = start_note
+
+    # Iterate over note names, which will be converted to note number later
+    for step in windows:
+
+        interval = from_one_hot(step)
+        if interval == 1000:
+            note_num = -1
+        else:
+            last_played_note = clamp(last_played_note + interval, 0, 127)
+            note_num = last_played_note
+        
+        # a note has changed
+        if allow_represses or note_num != cur_note:
+            
+            # if a note has been played before and it wasn't a rest
+            if cur_note is not None and cur_note >= 0:            
+                # add the last note, now that we have its end time
+
+                note = pretty_midi.Note(velocity=127, 
+                                        pitch=int(cur_note), 
+                                        start=cur_note_start, 
+                                        end=clock)
+                instrument.notes.append(note)
+
+            # update the current note
+            cur_note = note_num
+            cur_note_start = clock
+
+        # update the clock
+        clock = clock + 1.0 / 4
+
+    # Add the cello instrument to the PrettyMIDI object
+    midi.instruments.append(instrument)
+    return midi

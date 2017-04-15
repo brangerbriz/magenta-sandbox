@@ -5,9 +5,10 @@ from multiprocessing import Pool as ThreadPool
 from keras.utils.np_utils import to_categorical
 
 #format enum
-F_VANILLA_WINDOW       = 1
-F_EVENT_WINDOW_NOTES   = 2
-F_EVENT_WINDOW_TIMES   = 3
+F_VANILLA_WINDOW           = 1
+F_EVENT_WINDOW_NOTES       = 2
+F_EVENT_WINDOW_TIMES       = 3
+F_VANILLA_WINDOW_INTERVALS = 4
 
 # average windows per file (calculated using a window size of 
 # 20 and ~5,000 midi files). Useful in approximating an epoch 
@@ -32,12 +33,13 @@ def get_data_generator(midi_paths,
 
         if form == F_VANILLA_WINDOW or \
            form == F_EVENT_WINDOW_NOTES or \
-           form == F_EVENT_WINDOW_TIMES:
+           form == F_EVENT_WINDOW_TIMES or \
+           form == F_VANILLA_WINDOW_INTERVALS:
             return windows_from_monophonic_instruments(pm_midi, form, window_size)
         else:
             raise('Unsupported form parameter')
 
-    load_size = 400 # this refers to files
+    load_size = 170 # this refers to files
 
      # load midi data
     pool = ThreadPool(num_threads)
@@ -88,6 +90,8 @@ def windows_from_monophonic_instruments(midi, form, window_size):
                         windows = _encode_sliding_window_notes(instrument, window_size)
                     elif form == F_EVENT_WINDOW_TIMES:
                         windows = _encode_sliding_window_times(instrument, window_size)
+                    elif form == F_VANILLA_WINDOW_INTERVALS:
+                        windows = _encode_sliding_window_intervals(instrument, window_size)
                     for w in windows:
                         X.append(w[0])
                         y.append(w[1])
@@ -162,8 +166,8 @@ def _encode_sliding_windows(pm_instrument, window_size):
     roll = (roll > 0).astype(float)
     
     # calculate the percentage of the events that are rests
-    s = np.sum(roll, axis=1)
-    num_silence = len(np.where(s == 0)[0])
+    # s = np.sum(roll, axis=1)
+    # num_silence = len(np.where(s == 0)[0])
     # print('{}/{} {:.2f} events are rests'.format(num_silence, len(roll), float(num_silence)/float(len(roll))))
 
     # append a feature: 1 to rests and 0 to notes
@@ -174,4 +178,87 @@ def _encode_sliding_windows(pm_instrument, window_size):
     windows = []
     for i in range(0, roll.shape[0] - window_size - 1):
         windows.append((roll[i:i + window_size], roll[i + window_size + 1]))
+    return windows
+
+def _encode_sliding_window_intervals(pm_instrument, window_size):
+    
+    roll = np.copy(pm_instrument.get_piano_roll(fs=4).T)
+
+    # trim beginning silence
+    summed = np.sum(roll, axis=1)
+    mask = (summed > 0).astype(float)
+    roll = roll[np.argmax(mask):]
+    
+    # transform note velocities into 1s
+    roll = (roll > 0).astype(float)
+
+    # calculate the percentage of the events that are rests
+    # s = np.sum(roll, axis=1)
+    # num_silence = len(np.where(s == 0)[0])
+    # print('{}/{} {:.2f} events are rests'.format(num_silence, len(roll), float(num_silence)/float(len(roll))))
+
+    # append a feature: 1 to rests and 0 to notes
+    rests = np.sum(roll, axis=1)
+    rests = (rests != 1).astype(float)
+    roll = np.insert(roll, 0, rests, axis=1)
+    
+    roll = np.argmax(roll, axis=1)
+
+    obj = {
+        'last_played_note': 0
+    } 
+
+    def to_interval(this, last, obj):
+
+        rest_token = 1000
+        val = None
+
+        # if this is a rest
+        if this == 0:
+            val = rest_token
+        else:
+            # if the last token was a rest
+            if last == 0: 
+                if obj['last_played_note'] == 0:
+                    val = 0
+                else:
+                    val = this - obj['last_played_note']
+            else:
+                val = this - last
+
+         # if the last token wasn't a rest
+        if this != 0:
+                # save this value for the next note on
+            obj['last_played_note'] = this
+
+        return val
+
+    def clamp(val, min_, max_):
+        return min_ if val < min_ else max_ if val > max_ else val
+
+    def map_range(a, b, s):
+        (a1, a2), (b1, b2) = a, b
+        return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
+
+    def to_one_hot(val, rest_token=1000):
+        vec = np.zeros(101)
+        if val == rest_token:
+            vec[0] = 1
+        else:    
+            index = map_range((-50, 50), (1, 100), clamp(val, -50, 50))
+            vec[index] = 1
+        return vec
+
+    windows = []
+    for i in range(1, roll.shape[0] - window_size - 1):
+        
+        window_  = roll[i:i + window_size]
+        predict_ = roll[i + window_size + 1]
+
+        window = []
+        for i, _ in enumerate(window_):
+            window.append(to_one_hot(to_interval(window_[i], window_[i - 1], obj)))
+        predict = to_one_hot(to_interval(predict_, window_[-1], obj))
+        windows.append((window, predict))
+
     return windows

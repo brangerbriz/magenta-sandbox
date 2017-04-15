@@ -108,6 +108,44 @@ def generate_notes(model, seeds, window_size=20, length=1000, num_to_gen=10):
 # alias
 generate = generate_notes
 
+def generate_notes_from_intervals(model, 
+                                  seeds,
+                                  start_note=60, 
+                                  window_size=20, 
+                                  length=1000, 
+                                  num_to_gen=10):
+
+    # generate a pretty midi file from a model using a seed
+    def _gen(model, seed, window_size, length):
+        
+        generated = []
+        # ring buffer
+        buf = np.copy(seed).tolist()
+        while len(generated) < length:
+            arr = np.expand_dims(np.asarray(buf), 0)
+            pred = model.predict(arr)
+            
+            # argmax sampling (NOT RECOMMENDED), or...
+            # index = np.argmax(pred)
+            
+            # prob distrobuition sampling
+            index = np.random.choice(range(0, seed.shape[1]), p=pred[0])
+            pred = np.zeros(seed.shape[1])
+
+            pred[index] = 1
+            generated.append(pred)
+            buf.pop(0)
+            buf.append(pred)
+
+        return generated
+
+    midis = []
+    for i in range(0, num_to_gen):
+        seed = seeds[random.randint(0, len(seeds) - 1)]
+        gen = _gen(model, seed, window_size, length)
+        midis.append(midi_utils.network_output_intervals_to_midi(gen, start_note))
+    return midis
+
 def generate_timings(model, seeds, window_size=20, length=1000, num_to_gen=10):
         
     # generate a pretty midi file from a model using a seed

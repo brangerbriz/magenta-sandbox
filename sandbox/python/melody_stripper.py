@@ -34,7 +34,7 @@ def parse_args():
 def main():
 	
 	args = parse_args()
-	if os.path.isdir(args.input):
+q  	if os.path.isdir(args.input):
 		files = [os.path.join(args.input, f) \
 			     for f in os.listdir(args.input) if '.mid' in f]
 		if args.output == 'out.mid':
